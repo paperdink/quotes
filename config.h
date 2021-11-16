@@ -13,14 +13,8 @@
 // DETAILS TO EDIT
 #define SSID     "wire" // your network SSID (name of wifi network)
 #define PASSWORD "avrmicro!2" // your network password
-#define TODOIST_TOKEN "d781557b4c64e33aca7b765b5c88f014e3d26a91"
-#define CITY "seattle"
-#define COUNTRY "usa"
 #define OWM_ID "6f08bcf115cc4d5ee1c5b4967a1d6279"
 #define TIME_ZONE "+07:00"
-#define START_DAY_OFFSET 0 // Offset to change start day. 0=>Sun, 1=>Sat, 2=>Fri ... 6=>Mon
-#define FORECAST_HOURS 9 // Show forecasted weather this many hours from update time. 0 for current weather
-#define NUM_IMAGES 5 // Number of images in data folder. Will cycle through these images
 #define UPDATES_PER_DAY 1
 // Number of times to update starting 12am
 // 1 = Updates every 24 hours 
@@ -30,11 +24,17 @@
 // ... and so on
 // Higher number means lower battery life
 
-#define DEBUG Serial
+#define MAX_QUOTE_LENGTH 512
+#define MAX_AUTHOR_LENGTH 128
 
-// JSON buffer size for tasks
-#define MAX_TODO_STR_LENGTH 15
-#define MAX_TASKS 11
+#define QUOTE_MARGIN 20
+#define FIRST_LINE_MARGIN 55
+
+#define FIRST_LINE_CHARS 34
+#define NORMAL_LINE_CHARS 37
+#define LINE_HEIGHT_FACTOR 30
+
+#define DEBUG Serial
 
 // PIN ASSIGNMENT
 

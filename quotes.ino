@@ -21,24 +21,19 @@
  */
 
 #include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 #include <SPI.h>
 #include <sys/time.h>
 
 #include "config.h"
+#include "custom_parser.h"
 
 // E-paper
 GxIO_Class io(SPI, /*CS=*/ EPD_CS, /*DC=*/ EPD_DC, /*RST=*/ EPD_RES);
 GxEPD_Class display(io, /*RST=*/ EPD_RES, /*BUSY=*/ EPD_BUSY);
 
-#define QUOTE_MARGIN 20
-#define FIRST_LINE_MARGIN 55
-
-#define FIRST_LINE_CHARS 34
-#define NORMAL_LINE_CHARS 37
-#define LINE_HEIGHT_FACTOR 30
-
-char *quote_string = "All action results from thought, so it is thoughts that matter.";
-char *author_string = "Sai Baba";
+char quote_string[MAX_QUOTE_LENGTH];
+char author_string[MAX_AUTHOR_LENGTH];
 
 int8_t connect_wifi();
 void display_quote(GxEPD_Class* display);
@@ -63,6 +58,8 @@ void setup() {
   delay(50);
   //display.init(115200); // enable diagnostic output on DEBUG
   display.init();
+
+  connect_wifi();
 /* 
   if(connect_wifi() == 0){
     configTime(0, 0, "pool.ntp.org");
@@ -74,7 +71,7 @@ void setup() {
   }
 */
 
-  //get_quote();
+  get_quote();
   display_quote(&display);
   display.update();
 
@@ -101,6 +98,39 @@ void loop() {
 
 }
 
+const char* url = "https://api.quotable.io/random?tags=";
+quoteListener quote_listener;
+
+int8_t get_quote(){
+  //TODO: Handle failures
+  int httpCode;
+  String payload;
+  HTTPClient https;
+  WiFiClientSecure *client = new WiFiClientSecure;
+  
+  https.begin(*client, url);
+  https.addHeader("Content-Type", "application/json", 0, 0);  
+
+  httpCode = https.GET();
+  
+  if(httpCode == HTTP_CODE_OK) {
+      // HTTP header has been send and Server response header has been handled
+      DEBUG.printf("[HTTP] GET SUCCESS\n");
+      //String payload = https.getString();
+      //Serial.println(payload);
+      ArudinoStreamParser parser;
+      parser.setListener(&quote_listener);
+      https.writeToStream(&parser);
+  } else {
+      DEBUG.printf("[HTTP] AUTH... failed, error: %s\n", https.errorToString(httpCode).c_str());
+  }
+
+  https.end();
+
+  DEBUG.printf("[HTTP] COMPLETED \n");
+  return 0;
+}
+
 int32_t get_chars_words(char *string, char *first_line, int32_t char_count){
   int32_t length_count = 0;
   int32_t space_index = 0;
@@ -109,9 +139,9 @@ int32_t get_chars_words(char *string, char *first_line, int32_t char_count){
   while(*string != '\0' && length_count < (char_count-1)){
     length_count++;
     *temp = *string;
-    Serial.printf("%c", *string);
+    DEBUG.printf("%c", *string);
     if(*string == ' '){
-      Serial.printf("got space\n");
+      DEBUG.printf("got space\n");
       space_index = length_count;
     }
 
@@ -125,7 +155,7 @@ int32_t get_chars_words(char *string, char *first_line, int32_t char_count){
   
   first_line[space_index] = '\0';
 
-  Serial.printf("Completed %d\n", space_index);
+  DEBUG.printf("Completed %d\n", space_index);
   return space_index;
 }
 
@@ -152,13 +182,12 @@ void display_quote(GxEPD_Class* display){
   display->println(line);
 
   while(remaining > 0){
-    quote_string += completed;
-    completed = get_chars_words(quote_string, line, NORMAL_LINE_CHARS);
+    completed = get_chars_words(&quote_string[completed], line, NORMAL_LINE_CHARS);
     remaining -= completed;
-    display->getTextBounds(quote_string, 0, 0, &x, &y, &w, &h);
+    display->getTextBounds(line, 0, 0, &x, &y, &w, &h);
     display->setCursor(QUOTE_MARGIN+display->getCursorX(), display->getCursorY());
     display->println(line);
-    Serial.printf("Remaining %d\n", remaining);
+    DEBUG.printf("Remaining %d\n", remaining);
   }
 
   display->setFont(AUTHOR_FONT);

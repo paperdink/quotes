@@ -2,52 +2,52 @@
 #include "custom_parser.h"
 #include "JsonListener.h"
 
-enum STATE {NOT_FOUND, FOUND_TASK, FOUND_TIME, FOUND_WEATHER, FOUND_MAIN};
+enum STATE {NOT_FOUND, FOUND_CONTENT, FOUND_AUTHOR};
 static STATE key_found; 
 
-extern char tasks[MAX_TASKS][MAX_TODO_STR_LENGTH+1];
-extern uint8_t task_count;
+extern char quote_string[MAX_QUOTE_LENGTH];
+extern char author_string[MAX_AUTHOR_LENGTH];
 
-extern char weather_string[10];
-static uint8_t weather_count;
-
-void TodoJsonListener::whitespace(char c) {
+void quoteListener::whitespace(char c) {
 }
 
-void TodoJsonListener::startDocument() {
-  task_count = 0;
+void quoteListener::startDocument() {
+  key_found = NOT_FOUND;
 }
 
-void TodoJsonListener::key(String key) {
-  if(key.equals("content") && task_count < MAX_TASKS){
-    key_found = FOUND_TASK;
+void quoteListener::key(String key) {
+  if(key.equals("content")){
+    key_found = FOUND_CONTENT;
+  } else if (key.equals("author")){
+    key_found = FOUND_AUTHOR;
   }
 }
 
-void TodoJsonListener::value(String value) {
-  if(key_found){
-    // TODO: Figure out a way to directly print to display
-    // Limit to MAX_TODO_STR_LENGTH to display properly on screen
-    strncpy((char*)tasks[task_count], (char*)value.c_str(), MAX_TODO_STR_LENGTH);
-    tasks[task_count][MAX_TODO_STR_LENGTH+1] = '\0';
-    task_count++;
+void quoteListener::value(String value) {
+  if(key_found == FOUND_CONTENT){
+    strncpy(quote_string, (char*)value.c_str(), MAX_QUOTE_LENGTH);
+    DEBUG.printf("Quote: %s\n", quote_string);
+    key_found = NOT_FOUND;
+  } else if(key_found == FOUND_AUTHOR){
+    strncpy(author_string, (char*)value.c_str(), MAX_AUTHOR_LENGTH);
+    DEBUG.printf("Author: %s\n", author_string);
     key_found = NOT_FOUND;
   }
 }
 
-void TodoJsonListener::endArray() {
+void quoteListener::endArray() {
 }
 
-void TodoJsonListener::endObject() {
+void quoteListener::endObject() {
 }
 
-void TodoJsonListener::endDocument() {
+void quoteListener::endDocument() {
 }
 
-void TodoJsonListener::startArray() {
+void quoteListener::startArray() {
 }
 
-void TodoJsonListener::startObject() {
+void quoteListener::startObject() {
 }
 
 size_t ArudinoStreamParser::write(const uint8_t *data, size_t size) {
