@@ -11,10 +11,9 @@
 #include "Gobold_Thin9pt7b.h"
 
 // DETAILS TO EDIT
-#define SSID     "wire" // your network SSID (name of wifi network)
-#define PASSWORD "avrmicro!2" // your network password
-#define OWM_ID "6f08bcf115cc4d5ee1c5b4967a1d6279"
-#define TIME_ZONE "+07:00"
+#define SSID     "*****" // your network SSID (name of wifi network)
+#define PASSWORD "*****" // your network password
+#define TIME_ZONE "+07:00" // Your time zone. Daylight saving not handled yet.
 #define UPDATES_PER_DAY 1
 // Number of times to update starting 12am
 // 1 = Updates every 24 hours 
@@ -24,15 +23,16 @@
 // ... and so on
 // Higher number means lower battery life
 
-#define MAX_QUOTE_LENGTH 512
-#define MAX_AUTHOR_LENGTH 128
+#define QUOTE_TAGS ""          // Comma separated quote tags. see https://api.quotable.io/tags
+#define MAX_QUOTE_LENGTH 256   // Maximum characters in a quote
+#define MAX_AUTHOR_LENGTH 128  // Maximum characters in a author
 
-#define QUOTE_MARGIN 20
-#define FIRST_LINE_MARGIN 55
+#define FIRST_LINE_MARGIN 55   // Margin to leave on the left for the first line (in pixels)
+#define QUOTE_MARGIN_LEFT 18   // Margin to leave on the left of the quote 2nd line onwards (in pixels)
+#define QUOTE_MARGIN_RIGHT 18  // Margin to leave on the right of the quote (in pixels)
 
-#define FIRST_LINE_CHARS 34
-#define NORMAL_LINE_CHARS 37
-#define LINE_HEIGHT_FACTOR 30
+#define EXPECTED_LINE_CHARS 40 // Maximum expected characters in a line
+#define LINE_HEIGHT_FACTOR 30  // Dividing string length with this to get number of lines
 
 #define DEBUG Serial
 

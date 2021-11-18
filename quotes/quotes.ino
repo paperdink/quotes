@@ -27,6 +27,7 @@
 
 #include "config.h"
 #include "custom_parser.h"
+#include "date_time.h"
 
 // E-paper
 GxIO_Class io(SPI, /*CS=*/ EPD_CS, /*DC=*/ EPD_DC, /*RST=*/ EPD_RES);
@@ -60,20 +61,19 @@ void setup() {
   display.init();
 
   connect_wifi();
-/* 
+
   if(connect_wifi() == 0){
     configTime(0, 0, "pool.ntp.org");
     if(get_date_dtls(TIME_ZONE) < 0){
       configTime(0, 0, "pool.ntp.org");
     }
+    
+    get_quote();
+    display_quote(&display);
+    display.update();
   }else{
     get_date_dtls(TIME_ZONE);
   }
-*/
-
-  get_quote();
-  display_quote(&display);
-  display.update();
 
   DEBUG.println("Turning off everything");
   digitalWrite(SD_EN, HIGH);
@@ -86,11 +86,11 @@ void setup() {
   digitalWrite(EPD_RES, HIGH);
 
   // Sleep till update time.
-  //uint64_t sleep_time = (86400/(UPDATES_PER_DAY))-(((now.mil_hour*3600)+(now.min*60)+(now.sec))%(86400/UPDATES_PER_DAY));
-  //esp_sleep_enable_timer_wakeup(sleep_time*uS_TO_S_FACTOR);
-  //DEBUG.printf("Going to sleep for %lld seconds...", sleep_time);
+  uint64_t sleep_time = (86400/(UPDATES_PER_DAY))-(((now.mil_hour*3600)+(now.min*60)+(now.sec))%(86400/UPDATES_PER_DAY));
+  esp_sleep_enable_timer_wakeup(sleep_time*uS_TO_S_FACTOR);
+  DEBUG.printf("Going to sleep for %lld seconds...", sleep_time);
   // Go to sleep
-  //esp_deep_sleep_start();
+  esp_deep_sleep_start();
 }
 
 void loop() {
@@ -98,7 +98,10 @@ void loop() {
 
 }
 
-const char* url = "https://api.quotable.io/random?tags=";
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define MAX_QUOTE_LENGTH_STR TOSTRING(MAX_QUOTE_LENGTH)
+const char* url = "https://api.quotable.io/random?maxLength="MAX_QUOTE_LENGTH_STR"&tags=";
 quoteListener quote_listener;
 
 int8_t get_quote(){
@@ -131,42 +134,48 @@ int8_t get_quote(){
   return 0;
 }
 
-int32_t get_chars_words(char *string, char *first_line, int32_t char_count){
+int32_t get_chars_words(GxEPD_Class* display, char *string, char *first_line, uint8_t margin){
+  int16_t  x = 0, y = 0;
+  uint16_t w = 0, h = 0;
   int32_t length_count = 0;
   int32_t space_index = 0;
   char *temp = first_line;
   
-  while(*string != '\0' && length_count < (char_count-1)){
+  while(*string != '\0' && w <= display->width()-margin){
     length_count++;
     *temp = *string;
-    DEBUG.printf("%c", *string);
+    //DEBUG.printf("%c", *string);
+
     if(*string == ' '){
-      DEBUG.printf("got space\n");
+      //DEBUG.printf("got sep\n");
       space_index = length_count;
     }
 
+    *(temp+1) = '\0';
+    display->getTextBounds(first_line, 0, 0, &x, &y, &w, &h);
+    //DEBUG.printf("W: %d ===> %s\n", w, first_line);
+    
     temp++;
     string++;
   }
 
-  if(length_count < (char_count-1)){
+  if(w <= display->width()-margin){
     space_index = length_count;
   }
   
   first_line[space_index] = '\0';
 
-  DEBUG.printf("Completed %d\n", space_index);
   return space_index;
 }
 
 void display_quote(GxEPD_Class* display){
   int16_t  x, y;
   uint16_t w, h;
-  char line[NORMAL_LINE_CHARS];
+  char line[EXPECTED_LINE_CHARS];
   uint32_t first_line_chars, num_lines = 0;
-  int32_t remaining, completed;
-
-  remaining = strlen(quote_string);
+  int32_t str_len, completed = 0;
+  
+  str_len = strlen(quote_string);
   
   display->setFont(QUOTE_FONT);
   display->setTextColor(GxEPD_BLACK);
@@ -174,25 +183,24 @@ void display_quote(GxEPD_Class* display){
 
   // To get height of the font
   display->getTextBounds(F("A"), 0, 0, &x, &y, &w, &h);
-  num_lines = remaining/LINE_HEIGHT_FACTOR;
+  num_lines = (str_len/LINE_HEIGHT_FACTOR)+1;
   display->setCursor(FIRST_LINE_MARGIN, (display->height()-(num_lines*h))/2);
 
-  completed = get_chars_words(quote_string, line, FIRST_LINE_CHARS);
-  remaining -= completed;
+  completed = get_chars_words(display, quote_string, line, (FIRST_LINE_MARGIN+QUOTE_MARGIN_RIGHT));
   display->println(line);
 
-  while(remaining > 0){
-    completed = get_chars_words(&quote_string[completed], line, NORMAL_LINE_CHARS);
-    remaining -= completed;
+  while(completed < str_len){
+    completed += get_chars_words(display, &quote_string[completed], line, (QUOTE_MARGIN_LEFT+QUOTE_MARGIN_RIGHT));
+    DEBUG.printf("Completed: %d/%d\n", completed, str_len);
+    
     display->getTextBounds(line, 0, 0, &x, &y, &w, &h);
-    display->setCursor(QUOTE_MARGIN+display->getCursorX(), display->getCursorY());
+    display->setCursor(QUOTE_MARGIN_LEFT+display->getCursorX(), display->getCursorY());
     display->println(line);
-    DEBUG.printf("Remaining %d\n", remaining);
   }
 
   display->setFont(AUTHOR_FONT);
   display->getTextBounds(author_string, 0, 0, &x, &y, &w, &h);
-  display->setCursor((display->width()-w)/2, display->getCursorY());
+  display->setCursor((display->width()-w)/2, display->getCursorY()+10);
   display->print("-");
   display->println(author_string);
 }
