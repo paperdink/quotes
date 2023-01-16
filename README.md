@@ -1,5 +1,7 @@
 # Quotes
 
+Note: This has been moved to the new Paperd.ink library [here](https://github.com/paperdink/PaperdInk-Library/tree/main/examples/Quotes).
+
 ![Full Image](quotes.png)
 
 ## Install Library Dependencies (from arduino library manager)
